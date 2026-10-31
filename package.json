@@ -1,0 +1,26 @@
+{
+  "name": "cse341-books",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Dwaynemaster007/cse341-books#readme",
+  "bugs": {
+    "url": "https://github.com/Dwaynemaster007/cse341-books/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dwaynemaster007/cse341-books.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
