@@ -1,5 +1,11 @@
 import express from 'express';
-import { getBooksHandler, getBookByIdHandler } from './controllers/books.js';
+import {
+  getBooksHandler,
+  getBookByIdHandler,
+  createBookHandler,
+  updateBookHandler,
+  deleteBookHandler
+} from './controllers/books.js';
 import {
   getAuthorsHandler,
   getAuthorByIdHandler,
@@ -17,17 +23,14 @@ const router = express.Router();
  *     Book:
  *       type: object
  *       properties:
- *         _id:
- *           type: string
- *           description: MongoDB ObjectId
- *           example: 6ae5a14a8cf9ca5942af17ec
  *         id:
  *           type: string
  *           description: Custom book id
  *           example: b1
- *         author:
+ *         authorId:
  *           type: string
- *           example: Maya Rivera
+ *           description: The id of the book's author (references authors.id)
+ *           example: a1
  *         title:
  *           type: string
  *           example: Patterns of Light
@@ -36,6 +39,51 @@ const router = express.Router();
  *           format: date
  *           description: ISO 8601 date (YYYY-MM-DD)
  *           example: '2021-08-17'
+ *     BookInput:
+ *       type: object
+ *       required:
+ *         - id
+ *         - authorId
+ *         - title
+ *         - publicationDate
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Custom book id (must be unique)
+ *         authorId:
+ *           type: string
+ *           description: Must match the id of an existing author
+ *         title:
+ *           type: string
+ *         publicationDate:
+ *           type: string
+ *           format: date
+ *           description: ISO 8601 date (YYYY-MM-DD)
+ *       example:
+ *         id: b4
+ *         authorId: a1
+ *         title: Example Book Title
+ *         publicationDate: '2026-01-15'
+ *     BookUpdate:
+ *       type: object
+ *       required:
+ *         - authorId
+ *         - title
+ *         - publicationDate
+ *       properties:
+ *         authorId:
+ *           type: string
+ *           description: Must match the id of an existing author
+ *         title:
+ *           type: string
+ *         publicationDate:
+ *           type: string
+ *           format: date
+ *           description: ISO 8601 date (YYYY-MM-DD)
+ *       example:
+ *         authorId: a2
+ *         title: Updated Book Title
+ *         publicationDate: '2026-02-20'
  *     Author:
  *       type: object
  *       properties:
@@ -115,31 +163,64 @@ const router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/Book'
  *       500:
- *         description: Unable to retrieve books
+ *         $ref: '#/components/responses/ServerError'
+ *   post:
+ *     summary: Create a book
+ *     tags:
+ *       - Books
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BookInput'
+ *     responses:
+ *       201:
+ *         description: Book created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Book'
+ *       400:
+ *         description: Missing or invalid fields, duplicate id, or unknown authorId
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
- *             example:
- *               message: Internal server error
+ *             examples:
+ *               missingFields:
+ *                 value:
+ *                   message: id, authorId, title, and publicationDate are required
+ *               invalidDate:
+ *                 value:
+ *                   message: publicationDate must be a valid date in YYYY-MM-DD format
+ *               unknownAuthor:
+ *                 value:
+ *                   message: authorId does not match an existing author
+ *               duplicateId:
+ *                 value:
+ *                   message: A book with that id already exists
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
 router.get('/books', getBooksHandler);
+router.post('/books', createBookHandler);
 
 /**
  * @openapi
  * /books/{id}:
+ *   parameters:
+ *     - in: path
+ *       name: id
+ *       required: true
+ *       description: The custom book id, such as b1
+ *       schema:
+ *         type: string
+ *         example: b1
  *   get:
  *     summary: Get one book by id
  *     tags:
  *       - Books
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: The custom book id, such as b1
- *         schema:
- *           type: string
- *           example: b1
  *     responses:
  *       200:
  *         description: Book returned successfully
@@ -156,15 +237,69 @@ router.get('/books', getBooksHandler);
  *             example:
  *               message: Book not found
  *       500:
- *         description: Unable to retrieve book
+ *         $ref: '#/components/responses/ServerError'
+ *   put:
+ *     summary: Update a book
+ *     description: The id in the URL identifies the book. An id in the body is ignored, so ids cannot change.
+ *     tags:
+ *       - Books
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BookUpdate'
+ *     responses:
+ *       200:
+ *         description: Book updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Book'
+ *       400:
+ *         description: Missing or invalid fields, or unknown authorId
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *             examples:
+ *               missingFields:
+ *                 value:
+ *                   message: authorId, title, and publicationDate are required
+ *               unknownAuthor:
+ *                 value:
+ *                   message: authorId does not match an existing author
+ *       404:
+ *         description: Book not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
  *             example:
- *               message: Internal server error
+ *               message: Book not found
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *   delete:
+ *     summary: Delete a book
+ *     tags:
+ *       - Books
+ *     responses:
+ *       204:
+ *         description: Book deleted successfully (no response body)
+ *       404:
+ *         description: Book not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *             example:
+ *               message: Book not found
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
 router.get('/books/:id', getBookByIdHandler);
+router.put('/books/:id', updateBookHandler);
+router.delete('/books/:id', deleteBookHandler);
 
 /**
  * @openapi
